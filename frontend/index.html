@@ -1,0 +1,1607 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CADNOVA.io - AI Cloud CAD Platform</title>
+    <!-- Outfit & Inter Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- TensorFlow.js for AI camera object detection -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
+  </head>
+  <body class="light-theme tce-theme">
+    <!-- Intrusion Alert Banner (Original feature) -->
+    <div id="intrusion-alert-banner" class="intrusion-banner hidden">
+      <span class="intrusion-pulse-dot"></span>
+      <span id="intrusion-alert-message">⚠️ MOTION DETECTED — Living Room</span>
+      <button id="btn-dismiss-alert" class="btn-dismiss">Dismiss</button>
+    </div>
+
+    <div id="app">
+      <!-- App Header / Navigation Bar -->
+      <header class="app-header glass-header">
+        <div class="brand" id="nav-brand-logo">
+          <svg class="logo-icon animate-pulse" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+          <h1>CADNOVA<span>.io</span></h1>
+          <span class="badge">AI Cloud v4.0</span>
+        </div>
+
+        <!-- Main Navigation Links -->
+        <nav class="header-nav hidden" id="app-main-nav">
+          <button class="nav-link active" data-target="dashboard">Dashboard</button>
+          <button class="nav-link" data-target="workspace">CAD Workspace</button>
+          <button class="nav-link" data-target="community">Community Gallery</button>
+          <button class="nav-link" data-target="learning">Learning Hub</button>
+          <button class="nav-link" data-target="manufacturing">Manufacturing BOM</button>
+          <button class="nav-link admin-only hidden" id="nav-admin-link" data-target="admin">Admin Panel</button>
+        </nav>
+
+        <div class="header-right">
+          <!-- Auth Indicators -->
+          <div id="user-profile-badge" class="user-profile-badge hidden">
+            <span class="avatar-circle">👤</span>
+            <span id="header-username" class="username">Guest</span>
+            <span id="header-user-role" class="role-badge">Student</span>
+            <button id="btn-logout" class="btn-logout" title="Log Out">Logout</button>
+          </div>
+          <button id="btn-show-login" class="btn btn-secondary btn-sm">Sign In</button>
+
+          <div id="alert-badge" class="alert-badge hidden">0 Alerts</div>
+          <div class="system-status">
+            <span class="status-indicator online"></span>
+            <span class="status-text">Cloud Engine Online</span>
+          </div>
+          <!-- Dark Mode Toggle -->
+          <button id="btn-dark-mode" class="btn-dark-toggle" title="Toggle Dark Mode">
+            <span class="dark-toggle-icon" id="dark-mode-icon">🌙</span>
+            <span id="dark-mode-label">Dark</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- IoT Notifications Drawer -->
+      <div id="iot-notifications-drawer" class="notifications-drawer hidden glass-card">
+        <div class="drawer-header">
+          <h3>IoT Notifications</h3>
+          <button id="btn-close-notifications" class="btn-delete" title="Close">✕</button>
+        </div>
+        <div id="iot-notifications-list" class="event-log-list">
+          <div class="no-events">No new notifications</div>
+        </div>
+      </div>
+
+
+      <!-- ============================================== -->
+      <!-- VIEW: LANDING PAGE -->
+      <!-- ============================================== -->
+      <section id="view-landing" class="app-view landing-container">
+        <div class="hero-section">
+          <div class="hero-badge">✨ Next-Generation AI Cloud CAD</div>
+          <h1 class="hero-title">Model. Simulate. Manufacture.</h1>
+          <p class="hero-subtitle">
+            CADNOVA.io is the world's first AI-powered cloud CAD platform combining 3D solid modeling, 2D floor plans, AI copilot assistants, and smart manufacturing BOM tools in a single real-time collaborative workspace.
+          </p>
+          <div class="hero-actions">
+            <button class="btn btn-primary btn-lg" id="btn-hero-launch">Launch Workspace Free</button>
+            <a href="#features" class="btn btn-secondary btn-lg">Explore Features</a>
+          </div>
+        </div>
+
+        <div class="features-grid" id="features">
+          <div class="feature-card glass-card">
+            <div class="feature-icon">🤖</div>
+            <h3>AI Design Copilot</h3>
+            <p>Type "Create a 24 teeth gear" or speak voice commands to construct and modify geometry instantly.</p>
+          </div>
+          <div class="feature-card glass-card">
+            <div class="feature-icon">📐</div>
+            <h3>Hybrid 2D & 3D Engine</h3>
+            <p>Design architectural layouts with active IoT sensors or extrude precise mechanical components in 3D.</p>
+          </div>
+          <div class="feature-card glass-card">
+            <div class="feature-icon">🚀</div>
+            <h3>Manufacturing BOM</h3>
+            <p>Instantly estimate costs, assess material properties, and calculate carbon footprints for production.</p>
+          </div>
+          <div class="feature-card glass-card">
+            <div class="feature-icon">👥</div>
+            <h3>Team Collaboration</h3>
+            <p>Work with shared version history, live comments, cursors, and project permission roles.</p>
+          </div>
+        </div>
+
+        <!-- Pricing Tier Section -->
+        <div class="pricing-section">
+          <h2 class="section-title text-center">Flexible Architecture Licensing</h2>
+          <div class="pricing-grid">
+            <div class="price-card glass-card">
+              <span class="badge">Student</span>
+              <h3>Free</h3>
+              <p>For individuals, educators, and makers.</p>
+              <ul>
+                <li>✓ Standard 3D CAD Viewport</li>
+                <li>✓ 2D Smart Home Designer</li>
+                <li>✓ Basic AI Copilot Prompts</li>
+                <li>✓ 100 MB Storage</li>
+              </ul>
+              <button class="btn btn-secondary select-tier-btn" data-role="student">Get Started</button>
+            </div>
+            <div class="price-card glass-card premium-card">
+              <span class="badge badge-accent">Engineer / Professional</span>
+              <h3>$29<span>/mo</span></h3>
+              <p>For professional designers and developers.</p>
+              <ul>
+                <li>✓ Unlimited 3D/2D CAD Workspaces</li>
+                <li>✓ Voice Controls & Text-to-CAD</li>
+                <li>✓ Advanced Smart Model Analysis</li>
+                <li>✓ Full BOM & Manufacturing Reports</li>
+                <li>✓ 10 GB Storage & Version Restore</li>
+              </ul>
+              <button class="btn btn-primary select-tier-btn" data-role="engineer">Go Pro</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- VIEW: AUTHENTICATION -->
+      <!-- ============================================== -->
+      <section id="view-auth" class="app-view auth-container hidden">
+        <div class="auth-card glass-card">
+          <div class="auth-tabs">
+            <button id="tab-login" class="auth-tab-btn active">Sign In</button>
+            <button id="tab-register" class="auth-tab-btn">Sign Up</button>
+          </div>
+
+          <!-- Sign In Form -->
+          <form id="form-login" class="auth-form">
+            <h2>Welcome Back to CADNOVA.io</h2>
+            <div class="form-group">
+              <label for="login-username">Username</label>
+              <input type="text" id="login-username" class="text-input" placeholder="e.g., engineer" required />
+            </div>
+            <div class="form-group">
+              <label for="login-password">Password</label>
+              <input type="password" id="login-password" class="text-input" placeholder="••••••••" required />
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Sign In</button>
+            <p class="auth-help-text">Try usernames: <code class="cursor-pointer" onclick="document.getElementById('login-username').value='admin';document.getElementById('login-password').value='admin123';">admin</code> or <code class="cursor-pointer" onclick="document.getElementById('login-username').value='engineer';document.getElementById('login-password').value='engineer123';">engineer</code></p>
+          </form>
+
+          <!-- Register Form -->
+          <form id="form-register" class="auth-form hidden">
+            <h2>Create Developer Account</h2>
+            <div class="form-group">
+              <label for="reg-username">Username</label>
+              <input type="text" id="reg-username" class="text-input" placeholder="Choose username" required />
+            </div>
+            <div class="form-group">
+              <label for="reg-password">Password</label>
+              <input type="password" id="reg-password" class="text-input" placeholder="Create password" required />
+            </div>
+            <div class="form-group">
+              <label for="reg-role">Role</label>
+              <select id="reg-role" class="select-input">
+                <option value="student">Student / Maker</option>
+                <option value="engineer">Mechanical/Software Engineer</option>
+              </select>
+            </div>
+            <div class="form-group flex-row">
+              <label>Two-Factor Auth (Placeholder)</label>
+              <label class="toggle-switch">
+                <input type="checkbox" id="reg-2fa" />
+                <span class="slider"></span>
+              </label>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Register Account</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- VIEW: DASHBOARD -->
+      <!-- ============================================== -->
+      <section id="view-dashboard" class="app-view dashboard-container hidden">
+        <div class="dashboard-grid">
+          <!-- Left Column - Actions and Projects -->
+          <div class="dash-column-left">
+            <!-- Quick Actions -->
+            <div class="section-container glass-card">
+              <h2 class="section-title">Quick Actions</h2>
+              <div class="quick-actions-row">
+                <button class="btn btn-primary" id="btn-dash-new-project">
+                  ⚡ New Design
+                </button>
+                <button class="btn btn-secondary" id="btn-dash-import">
+                  📥 Import File
+                </button>
+                <button class="btn btn-secondary" id="btn-dash-templates">
+                  📚 Open Templates
+                </button>
+              </div>
+            </div>
+
+            <!-- Recent & Favorite Projects -->
+            <div class="section-container glass-card">
+              <div class="projects-header">
+                <h2 class="section-title">Recent Workspaces</h2>
+                <div class="filter-controls">
+                  <input type="text" id="project-search" placeholder="Search projects..." class="text-input text-input-sm" />
+                  <select id="project-filter-tag" class="select-input select-input-sm">
+                    <option value="">All Tags</option>
+                    <option value="Mechanical">Mechanical</option>
+                    <option value="SmartHome">SmartHome</option>
+                    <option value="Prototype">Prototype</option>
+                  </select>
+                </div>
+              </div>
+              <div id="dash-projects-list" class="dash-projects-grid">
+                <!-- Skeleton loader/list generated in main.ts -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column - Analytics and Info -->
+          <div class="dash-column-right">
+            <!-- Storage & Engine Status -->
+            <div class="section-container glass-card">
+              <h2 class="section-title">Cloud Quota Status</h2>
+              <div class="quota-progress-container">
+                <div class="quota-label-row">
+                  <span>Storage Usage</span>
+                  <span id="quota-percentage">15% (15 MB / 100 MB)</span>
+                </div>
+                <div class="quota-progress-bar">
+                  <div class="quota-progress" id="quota-bar" style="width: 15%"></div>
+                </div>
+                <div class="quota-tier-note" id="quota-tier-note">
+                  Upgrade to Engineer Tier for 10 GB cloud storage and version restore features.
+                </div>
+              </div>
+            </div>
+
+            <!-- AI Suggestions -->
+            <div class="section-container glass-card">
+              <h2 class="section-title">🤖 AI Design Copilot Suggestions</h2>
+              <div class="ai-suggestion-box" id="ai-suggestions-content">
+                <p class="suggestion-item">💡 <em>"Your gear model has high wear stress on root fillets. Consider increasing fillet radius."</em></p>
+                <p class="suggestion-item">💡 <em>"Add a smart temperature sensor to the Kitchen layout for carbon monoxide alarms."</em></p>
+              </div>
+            </div>
+
+            <!-- Activity Stream -->
+            <div class="section-container glass-card">
+              <h2 class="section-title">Team Activity Feed</h2>
+              <div class="activity-feed" id="activity-feed-list">
+                <div class="activity-item">
+                  <span class="activity-time">Just now</span>
+                  <span class="activity-user">engineer_guest</span> duplicated <strong>My Smart Home</strong>
+                </div>
+                <div class="activity-item">
+                  <span class="activity-time">2 hours ago</span>
+                  <span class="activity-user">admin</span> changed configuration settings of <strong>Gear Reducer V1</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- VIEW: CAD WORKSPACE (Combined Original + 3D) -->
+      <!-- ============================================== -->
+      <section id="view-workspace" class="app-view workspace-container hidden">
+        <div class="app-layout">
+          <!-- Sidebar Left (Original Design Manager & Placer) -->
+          <aside class="sidebar-left">
+            <!-- Create & Manage Designs Section -->
+            <div class="section-container">
+              <h2 class="section-title">Workspace Manager</h2>
+              <div class="control-group">
+                <input type="text" id="design-name-input" placeholder="Design Name" class="text-input" value="My Smart Home" />
+                <textarea id="design-desc-input" placeholder="Optional description..." class="text-area-input"></textarea>
+                
+                <div class="form-group tag-group">
+                  <label for="workspace-tags">Project Tag</label>
+                  <select id="workspace-tags" class="select-input">
+                    <option value="SmartHome">SmartHome Layout</option>
+                    <option value="Mechanical">Mechanical Part</option>
+                    <option value="Prototype">Rapid Prototype</option>
+                  </select>
+                </div>
+
+                <div class="btn-row">
+                  <button id="btn-save-design" class="btn btn-primary">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                    Save Design
+                  </button>
+                  <button id="btn-new-design" class="btn btn-secondary">New</button>
+                </div>
+                
+                <!-- Extra Project Actions -->
+                <div class="btn-row-triple">
+                  <button id="btn-duplicate-design" class="btn btn-secondary btn-sm" title="Duplicate this project">Duplicate</button>
+                  <button id="btn-archive-design" class="btn btn-secondary btn-sm" title="Archive project">Archive</button>
+                  <span id="autosave-indicator" class="autosave-tag">Autosave: On</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Saved Layouts Database List -->
+            <div class="section-container">
+              <h2 class="section-title">Saved Cloud CADNOVA.io Projects</h2>
+              <div id="saved-designs-list" class="designs-list">
+                <div class="loading-placeholder">Loading database entries...</div>
+              </div>
+            </div>
+
+            <!-- Hybrid Catalog (Smart Devices for 2D, Template solids for 3D) -->
+            <div class="section-container device-catalog-section" id="workspace-catalog-panel">
+              <div class="catalog-tab-header">
+                <h2 class="section-title" id="catalog-title">Smart Catalog</h2>
+              </div>
+              
+              <!-- Search & Filter Category Bar (Phase 4 addition) -->
+              <div id="catalog-search-container" class="catalog-search-container" style="padding: 10px; display: flex; flex-direction: column; gap: 8px;">
+                <input type="text" id="catalog-search" class="text-input text-input-sm" placeholder="Search 75+ devices..." />
+                <select id="catalog-category-filter" class="select-input select-input-sm">
+                  <option value="all">📁 All Categories</option>
+                  <option value="lighting">💡 Lighting</option>
+                  <option value="sensors">🌡️ Sensors</option>
+                  <option value="security">🔒 Security</option>
+                  <option value="appliances">🔌 Appliances & Plugs</option>
+                  <option value="networking">📶 Networking</option>
+                  <option value="energy">⚡ Energy & Power</option>
+                  <option value="entertainment">📺 Entertainment</option>
+                  <option value="comfort">❄️ HVAC & Comfort</option>
+                  <option value="automation">⚙️ Automation & Switches</option>
+                  <option value="medical">🩺 Medical Healthcare</option>
+                  <option value="industrial">🏭 Industrial Systems</option>
+                  <option value="agriculture">🌾 Agriculture & Crops</option>
+                  <option value="environmental">🍃 Environmental</option>
+                  <option value="utilities">🚰 Utilities & Meters</option>
+                  <option value="favorites">⭐ Favorites</option>
+                </select>
+              </div>
+              
+              <!-- 2D Floor Plan Device Grid (Dynamic content inside) -->
+              <div class="catalog-grid" id="catalog-grid-2d"></div>
+
+              <!-- 3D Geometry Solid Addons -->
+              <div class="catalog-grid hidden" id="catalog-grid-3d">
+                <div class="catalog-item" id="btn-add-3d-cube" data-3d-type="cube">
+                  <div class="item-icon solid-cube-icon">📦</div>
+                  <span>Add Cube</span>
+                </div>
+                <div class="catalog-item" id="btn-add-3d-cylinder" data-3d-type="cylinder">
+                  <div class="item-icon solid-cyl-icon">🧪</div>
+                  <span>Add Cylinder</span>
+                </div>
+                <div class="catalog-item" id="btn-add-3d-gear" data-3d-type="gear">
+                  <div class="item-icon solid-gear-icon">⚙️</div>
+                  <span>Add Gear</span>
+                </div>
+                <div class="catalog-item" id="btn-add-3d-shaft" data-3d-type="shaft">
+                  <div class="item-icon solid-shaft-icon">🥖</div>
+                  <span>Add Shaft</span>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          <!-- Middle Canvas Area with View Toggles -->
+          <section class="canvas-area">
+
+            <!-- ═══ BOX 1: ENGINE SWITCHER BAR ═══ -->
+            <div class="ws-bar ws-engine-bar">
+              <div class="engine-bar-left">
+                <div class="engine-mode-group" role="group">
+                  <button id="btn-engine-2d" class="btn-mode active" title="Switch to 2D Floor Plan Layout mode">
+                    📐 2D Layout Floor Plan
+                  </button>
+                  <button id="btn-engine-3d" class="btn-mode" title="Switch to 3D Solid Modeler mode">
+                    🧊 3D Solid Modeler
+                  </button>
+                </div>
+              </div>
+              <div class="engine-bar-center">
+                <span id="canvas-status" class="canvas-status-label">Select mode — drag components or edit parameters</span>
+              </div>
+              <div class="engine-bar-right">
+                <button id="btn-clear-canvas" class="btn btn-danger-outline btn-sm" title="Clear entire floor plan">🗑 Clear Layout</button>
+              </div>
+            </div>
+
+            <!-- ═══ BOX 2: MODE CONTROL BAR ═══ -->
+            <div class="ws-bar ws-mode-bar" id="ws-mode-bar-2d">
+              <div class="mode-bar-group">
+                <span class="mode-bar-label">DRAWING MODE</span>
+                <div class="toolbar-mode-group" role="group">
+                  <button id="btn-mode-select" class="btn-mode active" title="Select & Move objects [Esc]">
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 3l14 9-7 2-2 7z"/></svg>
+                    Select
+                  </button>
+                  <button id="btn-mode-draw" class="btn-mode" title="Draw wall / room boundary [D]">
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    Draw Wall
+                  </button>
+                  <button id="btn-mode-erase" class="btn-mode" title="Erase objects [E]">
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 20H7L3 16l11-11 6 6-1.5 1.5"/><path d="M6.0 11.0 9.0 14.0"/></svg>
+                    Erase
+                  </button>
+                </div>
+              </div>
+
+              <div class="mode-bar-divider"></div>
+
+              <div class="mode-bar-group">
+                <span class="mode-bar-label">ROOMS</span>
+                <button id="btn-add-room" class="btn btn-secondary btn-sm" title="Add a room rectangle to the floor plan [A]">
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v8M8 12h8"/></svg>
+                  + Add Room
+                </button>
+              </div>
+
+              <div class="mode-bar-divider"></div>
+
+              <div class="mode-bar-group">
+                <span class="mode-bar-label">VIEW</span>
+                <div class="mode-view-controls">
+                  <button id="btn-toggle-grid" class="ws-toggle-btn active" title="Toggle gridlines on/off [G]">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="1.5"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/></svg>
+                    <span id="grid-btn-label">Grid ON</span>
+                  </button>
+                  <button id="btn-toggle-snap" class="ws-toggle-btn active" title="Toggle snap to grid [K]">
+                    🧲 <span>Snap ON</span>
+                  </button>
+                  <button id="btn-toggle-minimap" class="ws-toggle-btn active" title="Toggle mini-map [V]">
+                    🗺 <span>Map</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="mode-bar-divider"></div>
+
+              <div class="mode-bar-group">
+                <span class="mode-bar-label">3D CONTROLS</span>
+                <div id="toolbar-actions-3d" class="mode-view-controls hidden">
+                  <button id="btn-3d-orbit" class="ws-toggle-btn active" title="Orbit Model">🔄 Orbit</button>
+                  <button id="btn-3d-zoom-in" class="ws-toggle-btn" title="Zoom In">🔍+</button>
+                  <button id="btn-3d-zoom-out" class="ws-toggle-btn" title="Zoom Out">🔍−</button>
+                  <button id="btn-3d-reset-view" class="ws-toggle-btn" title="Reset Camera">⊙ Reset</button>
+                </div>
+                <span class="mode-inactive-hint" id="hint-3d-controls">Switch to 3D mode</span>
+              </div>
+            </div>
+
+            <!-- ═══ BOX 3: ACTION TOOLBAR (5 sections) ═══ -->
+            <div class="ws-bar ws-action-bar" id="cad-workspace-toolbar">
+              <!-- SECTION 1: History -->
+              <div class="toolbar-section" id="tb-sec-1">
+                <span class="section-label">History</span>
+                <div class="toolbar-group">
+                  <button id="btn-undo" class="btn btn-secondary btn-sm" title="Undo [Ctrl+Z]">↩ Undo</button>
+                  <button id="btn-redo" class="btn btn-secondary btn-sm" title="Redo [Ctrl+Y]">↪ Redo</button>
+                  <button id="btn-history-panel" class="btn btn-secondary btn-sm" title="History [Ctrl+H]">⏳ Log</button>
+                </div>
+              </div>
+
+              <!-- SECTION 2: Clipboard -->
+              <div class="toolbar-section" id="tb-sec-2">
+                <span class="section-label">Clipboard</span>
+                <div class="toolbar-group">
+                  <button id="btn-copy" class="btn btn-secondary btn-sm" title="Copy [Ctrl+C]">📋 Copy</button>
+                  <button id="btn-paste" class="btn btn-secondary btn-sm" title="Paste [Ctrl+V]">📥 Paste</button>
+                  <button id="btn-duplicate" class="btn btn-secondary btn-sm" title="Duplicate [Ctrl+D]">📑 Dupe</button>
+                  <button id="btn-delete" class="btn btn-secondary btn-sm" title="Delete [Del]">🗑️ Del</button>
+                </div>
+              </div>
+
+              <!-- SECTION 3: Transforms & Grouping -->
+              <div class="toolbar-section" id="tb-sec-3">
+                <span class="section-label">Transform &amp; Group</span>
+                <div class="toolbar-group">
+                  <button id="btn-move-tool" class="btn btn-secondary btn-sm" title="Move [M]">🖐 Move</button>
+                  <button id="btn-rotate-tool" class="btn btn-secondary btn-sm" title="Rotate [R] — enter angle">🔄 Rot</button>
+                  <button id="btn-resize-tool" class="btn btn-secondary btn-sm" title="Resize [S]">↕ Size</button>
+                  <button id="btn-flip-h" class="btn btn-secondary btn-sm" title="Flip Horizontal [F]">↔ FlipH</button>
+                  <button id="btn-flip-v" class="btn btn-secondary btn-sm" title="Flip Vertical [V]">↕ FlipV</button>
+                  <button id="btn-align-left" class="btn btn-secondary btn-sm align-btn" title="Align Left">⇤L</button>
+                  <button id="btn-align-right" class="btn btn-secondary btn-sm align-btn" title="Align Right">R⇥</button>
+                  <button id="btn-align-top" class="btn btn-secondary btn-sm align-btn" title="Align Top">⤒T</button>
+                  <button id="btn-align-bottom" class="btn btn-secondary btn-sm align-btn" title="Align Bottom">B⤓</button>
+                  <button id="btn-group" class="btn btn-secondary btn-sm" title="Group [Ctrl+G]">🔗 Group</button>
+                  <button id="btn-ungroup" class="btn btn-secondary btn-sm" title="Ungroup [Ctrl+U]">🔓 Split</button>
+                </div>
+              </div>
+
+              <!-- SECTION 4: View & Measure -->
+              <div class="toolbar-section" id="tb-sec-4">
+                <span class="section-label">View &amp; Measure</span>
+                <div class="toolbar-group">
+                  <button id="btn-zoom-in" class="btn btn-secondary btn-sm" title="Zoom In [Ctrl+=]">🔍+</button>
+                  <button id="btn-zoom-out" class="btn btn-secondary btn-sm" title="Zoom Out [Ctrl+-]">🔍−</button>
+                  <button id="btn-fit-screen" class="btn btn-secondary btn-sm" title="Fit to Screen [Ctrl+0]">⛶ Fit</button>
+                  <button id="btn-pan-mode" class="btn btn-secondary btn-sm" title="Pan Mode [H]">✋ Pan</button>
+                  <button id="btn-measure-tool" class="btn btn-secondary btn-sm" title="Caliper Ruler [N]">📏 Ruler</button>
+                </div>
+              </div>
+
+              <!-- SECTION 5: File & Simulation -->
+              <div class="toolbar-section" id="tb-sec-5">
+                <span class="section-label">File &amp; Simulate</span>
+                <div class="toolbar-group">
+                  <div class="dropdown-container">
+                    <button id="btn-export-menu" class="btn btn-secondary btn-sm">📤 Export ▾</button>
+                    <div id="export-dropdown" class="dropdown-menu hidden">
+                      <button class="export-opt" data-format="STL">STL 3D Mesh</button>
+                      <button class="export-opt" data-format="OBJ">OBJ 3D Model</button>
+                      <button class="export-opt" data-format="DXF">DXF Drawing</button>
+                      <button class="export-opt" data-format="SVG">SVG Vector 2D</button>
+                      <button class="export-opt" data-format="PDF">PDF BOM Report</button>
+                      <button class="export-opt" data-format="PNG">PNG Image</button>
+                    </div>
+                  </div>
+                  <div class="dropdown-container">
+                    <button id="btn-import-menu" class="btn btn-secondary btn-sm">📥 Import ▾</button>
+                    <div id="import-dropdown" class="dropdown-menu hidden">
+                      <button id="opt-import-file">Upload JSON CAD</button>
+                      <input type="file" id="cad-import-input" class="hidden" accept=".json" />
+                    </div>
+                  </div>
+                  <button id="btn-save-design" class="btn btn-secondary btn-sm" title="Save [Ctrl+S]">💾 Save</button>
+                  <label class="autosave-label" title="Toggle auto-save">
+                    <input type="checkbox" id="btn-toggle-autosave" checked />
+                    <span>Auto</span>
+                  </label>
+                  <button id="btn-generate-report" class="btn btn-secondary btn-sm" title="Generate Report">📋 Report</button>
+                  <button id="btn-run-simulation" class="btn btn-primary btn-sm" title="Run Simulation">🌀 Sim</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Add Room Slide Panel -->
+            <div id="add-room-panel" class="add-room-panel hidden">
+              <div class="room-panel-header">
+                <span>Choose Room Type</span>
+                <button id="btn-close-room-panel" class="btn-icon-sm">✕</button>
+              </div>
+              <div class="room-type-grid">
+                <button class="room-type-btn" data-room-type="living" data-room-name="Living Room">🛋️<span>Living</span></button>
+                <button class="room-type-btn" data-room-type="kitchen" data-room-name="Kitchen">🍳<span>Kitchen</span></button>
+                <button class="room-type-btn" data-room-type="bedroom" data-room-name="Bedroom">🛏️<span>Bedroom</span></button>
+                <button class="room-type-btn" data-room-type="bathroom" data-room-name="Bathroom">🚿<span>Bathroom</span></button>
+                <button class="room-type-btn" data-room-type="garage" data-room-name="Garage">🚗<span>Garage</span></button>
+                <button class="room-type-btn" data-room-type="office" data-room-name="Office">💼<span>Office</span></button>
+                <button class="room-type-btn" data-room-type="hallway" data-room-name="Hallway">🚪<span>Hallway</span></button>
+                <button class="room-type-btn" data-room-type="balcony" data-room-name="Balcony">🌿<span>Balcony</span></button>
+                <button class="room-type-btn" data-room-type="study" data-room-name="Study">📚<span>Study</span></button>
+                <button class="room-type-btn" data-room-type="gym" data-room-name="Gym">💪<span>Gym</span></button>
+                <button class="room-type-btn" data-room-type="kids" data-room-name="Kids Room">🧸<span>Kids</span></button>
+                <button class="room-type-btn" data-room-type="storage" data-room-name="Storage">📦<span>Storage</span></button>
+              </div>
+              <div class="room-panel-footer">
+                <input type="text" id="custom-room-name" class="text-input" placeholder="Custom room name..." />
+                <button id="btn-add-custom-room" class="btn btn-primary btn-sm">Add</button>
+              </div>
+            </div>
+
+            <!-- ═══ BOX 4: SVG CANVAS ═══ -->
+            <div class="canvas-container-outer">
+              <!-- Engine 2D Floor Plan Canvas (Original SVG) -->
+              <div class="canvas-container" id="container-canvas-2d">
+                <svg id="cad-canvas" viewBox="0 0 800 500" width="100%" height="100%">
+                  <defs>
+                    <pattern id="subgrid" width="10" height="10" patternUnits="userSpaceOnUse">
+                      <path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(92, 42, 143, 0.04)" stroke-width="0.5" />
+                    </pattern>
+                    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                      <rect width="40" height="40" fill="url(#subgrid)" />
+                      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(92, 42, 143, 0.09)" stroke-width="1" />
+                    </pattern>
+                  </defs>
+                  <rect id="grid-bg" width="100%" height="100%" fill="url(#grid)" />
+                  <g id="walls-group"></g>
+                  <g id="rooms-group"></g>
+                  <polyline id="wall-preview" fill="none" stroke="#5c2a8f" stroke-width="2" stroke-dasharray="6 4" points="" opacity="0.7"/>
+                  <circle id="wall-start-dot" r="4" fill="#5c2a8f" opacity="0" />
+                  <g id="placed-devices-group"></g>
+                </svg>
+                <!-- Mini-map Overlay -->
+                <div id="canvas-minimap-container" class="canvas-minimap-container glass-card">
+                  <span class="minimap-title">Mini-map</span>
+                  <svg id="minimap-svg" viewBox="0 0 800 500"></svg>
+                </div>
+              </div>
+
+              <!-- Engine 3D Three.js Canvas Container -->
+              <div id="three-canvas-container" class="canvas-container hidden">
+                <!-- Three.js renderer attaches here dynamically in main.ts -->
+              </div>
+
+              <!-- ═══ 4-SECTION DIVIDER OVERLAY (always on top, pointer-events: none) ═══ -->
+              <div class="cad-cross-overlay" id="cad-cross-overlay">
+                <div class="cad-divider-v" id="cad-divider-v"></div>
+                <div class="cad-divider-h" id="cad-divider-h"></div>
+                <span class="cad-quad-label" style="top:10px;left:10px;">View 1</span>
+                <span class="cad-quad-label" style="top:10px;right:10px;">View 2</span>
+                <span class="cad-quad-label" style="bottom:10px;left:10px;">View 3</span>
+                <span class="cad-quad-label" style="bottom:10px;right:10px;">View 4</span>
+              </div>
+            </div>
+
+            <!-- Voice Control Bar Panel -->
+            <div class="voice-control-bar glass-card">
+              <button id="btn-voice-toggle" class="btn-voice-mic" title="Start voice control listener">
+                🎤 <span id="voice-mic-text">Voice Controls</span>
+              </button>
+              <div class="voice-commands-help">
+                <code>"Rotate model"</code>, <code>"Zoom in"</code>, <code>"Create cylinder"</code>, <code>"Save project"</code>
+              </div>
+              <span id="voice-status-feedback" class="voice-feedback">Status: Idle</span>
+            </div>
+          </section>
+
+          <!-- Sidebar Right (Combined Properties and AI Copilot sidebars) -->
+          <aside class="sidebar-right">
+            <!-- Property Editor Panel -->
+            <div class="section-container property-panel">
+              <h2 class="section-title">Properties Inspector</h2>
+              
+              <!-- 2D Selected Inspector (Original panel) -->
+              <div id="inspector-2d-section">
+                <div id="no-device-selected" class="no-selection-placeholder">
+                  <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="rgba(255, 255, 255, 0.1)" stroke-width="1.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                  <p>Select a placed smart device to edit parameters or simulate status</p>
+                </div>
+                
+                <div id="device-editor" class="editor-form hidden">
+                  <div class="editor-header">
+                    <span id="editor-device-type" class="device-badge">Smart Light</span>
+                    <button id="btn-delete-device" class="btn-delete" title="Delete Device">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                    </button>
+                  </div>
+
+                  <div id="esp32-status-container" class="esp32-status-bar form-group hidden">
+                    <span id="esp32-status-dot" class="esp32-status-dot esp32-disconnected"></span>
+                    <span id="esp32-status-badge" class="esp32-status-label esp32-disconnected">ESP32 Disconnected</span>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="prop-name">Device Name</label>
+                    <input type="text" id="prop-name" class="text-input" />
+                  </div>
+                  <div class="form-group">
+                    <label for="prop-room">Assigned Room</label>
+                    <select id="prop-room" class="select-input">
+                      <option value="Living Room">Living Room</option>
+                      <option value="Kitchen / Dining">Kitchen & Dining</option>
+                      <option value="Bedroom">Bedroom</option>
+                      <option value="Balcony & Deck">Balcony & Deck</option>
+                    </select>
+                  </div>
+
+                  <!-- Expanded dynamic specs (Phase 6 additions) -->
+                  <div class="form-group-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; font-size: 11px; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+                    <div>
+                      <span class="label-light" style="opacity:0.7;">Category:</span><br/>
+                      <strong id="prop-val-category" style="color:var(--purple-accent);">Lighting</strong>
+                    </div>
+                    <div>
+                      <span class="label-light" style="opacity:0.7;">Manufacturer:</span><br/>
+                      <strong id="prop-val-mfg">CADNOVA.io IoT</strong>
+                    </div>
+                    <div>
+                      <span class="label-light" style="opacity:0.7;">Power usage:</span><br/>
+                      <strong id="prop-val-power">12W</strong>
+                    </div>
+                    <div>
+                      <span class="label-light" style="opacity:0.7;">Signal RSSI:</span><br/>
+                      <strong id="prop-val-signal">-65 dBm</strong>
+                    </div>
+                    <div>
+                      <span class="label-light" style="opacity:0.7;">Battery:</span><br/>
+                      <strong id="prop-val-battery">85%</strong>
+                    </div>
+                    <div>
+                      <span class="label-light" style="opacity:0.7;">Firmware:</span><br/>
+                      <strong id="prop-val-firmware">v1.2.4</strong>
+                    </div>
+                    <div>
+                      <span class="label-light" style="opacity:0.7;">Position X/Y:</span><br/>
+                      <strong id="prop-val-coords">400, 250</strong>
+                    </div>
+                    <div>
+                      <span class="label-light" style="opacity:0.7;">Scale:</span><br/>
+                      <strong id="prop-val-scale">1.0x</strong>
+                    </div>
+                  </div>
+
+                  <div class="form-group flex-row">
+                    <label>Operational State</label>
+                    <label class="toggle-switch">
+                      <input type="checkbox" id="prop-state" />
+                      <span class="slider"></span>
+                    </label>
+                  </div>
+
+                  <!-- Blue ON LED Indicator (Smart Dimmer Wall Switch) -->
+                  <div id="led-indicator-row" class="led-indicator-row hidden">
+                    <div class="flex-row" style="width: 100%; align-items: center; justify-content: space-between;">
+                      <div style="display: flex; align-items: center; gap: 8px;">
+                        <div id="led-on-indicator" class="led-indicator"></div>
+                        <span id="led-state-label" class="led-state-label">OFF</span>
+                      </div>
+                      <div style="display: flex; align-items: center; gap: 6px;">
+                        <label for="esp32-device-select" class="label-light" style="font-size: 11px;">Device:</label>
+                        <select id="esp32-device-select" class="select-input" style="padding: 2px 6px; font-size: 11px; height: auto;">
+                          <option value="none">No Device</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Dynamic Sub-Controls -->
+                  <div id="ctrl-light" class="conditional-controls hidden">
+                    <div class="form-group">
+                      <div class="flex-row" style="justify-content: space-between; align-items: baseline;">
+                        <label for="prop-brightness">Brightness: <span id="val-brightness">80%</span></label>
+                      </div>
+                      <input type="range" id="prop-brightness" min="0" max="100" value="80" class="range-slider" />
+                      <div class="sparkline-container" style="margin-top: 8px;">
+                        <label style="font-size: 10px; opacity: 0.7;">Live Brightness Level</label>
+                        <svg id="brightness-sparkline" class="sparkline" viewBox="0 0 200 30" preserveAspectRatio="none" style="height: 30px;">
+                          <path id="bright-spark-path" d="" fill="none" stroke="var(--yellow-accent)" stroke-width="2" stroke-linejoin="round"/>
+                          <path id="bright-spark-area" d="" fill="var(--yellow-glow)" stroke="none"/>
+                        </svg>
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label for="prop-color">Light Color</label>
+                      <div class="color-picker-row" style="display: flex; align-items: center; gap: 12px;">
+                        <input type="color" id="prop-color" value="#ffbe3b" class="color-picker" />
+                        <div class="color-preview-group" style="display: flex; flex-direction: column;">
+                          <div id="color-preview-circle" style="width: 24px; height: 24px; border-radius: 50%; background: #ffbe3b; box-shadow: 0 0 8px rgba(255,190,59,0.5); border: 2px solid rgba(255,255,255,0.2);"></div>
+                          <span id="rgb-value-display" style="font-size: 10px; opacity: 0.7; margin-top: 4px; font-family: monospace;">R:255 G:190 B:59</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label>Color Presets</label>
+                      <div class="scene-preset-grid">
+                        <button class="scene-btn color-preset-btn" data-color="#ffbe3b" title="Warm White" style="border-left: 3px solid #ffbe3b;">Warm</button>
+                        <button class="scene-btn color-preset-btn" data-color="#e2f1ff" title="Cool White" style="border-left: 3px solid #e2f1ff;">Cool</button>
+                        <button class="scene-btn color-preset-btn" data-color="#ff4444" title="Red" style="border-left: 3px solid #ff4444;">Red</button>
+                        <button class="scene-btn color-preset-btn" data-color="#44ff44" title="Green" style="border-left: 3px solid #44ff44;">Green</button>
+                        <button class="scene-btn color-preset-btn" data-color="#4444ff" title="Blue" style="border-left: 3px solid #4444ff;">Blue</button>
+                        <button class="scene-btn color-preset-btn" data-color="#8b5cf6" title="Purple" style="border-left: 3px solid #8b5cf6;">Purple</button>
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label>Scene Presets</label>
+                      <div class="scene-preset-grid">
+                        <button class="scene-btn scene-mode-btn" data-scene="movie" title="Movie Mode">🎬 Movie</button>
+                        <button class="scene-btn scene-mode-btn" data-scene="sleep" title="Sleep Mode">🌙 Sleep</button>
+                        <button class="scene-btn scene-mode-btn" data-scene="reading" title="Reading Mode">📖 Reading</button>
+                        <button class="scene-btn scene-mode-btn" data-scene="party" title="Party Mode">🎉 Party</button>
+                      </div>
+                    </div>
+                    <div class="form-group flex-row">
+                      <label>Light Toggle</label>
+                      <button id="btn-light-toggle" class="btn btn-light-on">💡 Turn Off</button>
+                    </div>
+                  </div>
+
+                  <div id="ctrl-thermostat" class="conditional-controls hidden">
+                    <div class="form-group">
+                      <label for="prop-temp">Target Temp: <span id="val-temp">22°C</span></label>
+                      <input type="range" id="prop-temp" min="16" max="30" value="22" step="0.5" class="range-slider" />
+                    </div>
+                  </div>
+
+                  <div id="ctrl-camera" class="conditional-controls hidden">
+                    <label>Live AI Camera Feed</label>
+                    <div class="camera-stream-container">
+                      <video id="camera-video" autoplay muted playsinline></video>
+                      <canvas id="camera-canvas-overlay"></canvas>
+                      <div class="camera-hud">
+                        <span class="stream-recording-dot" id="cam-rec-dot"></span>
+                        <span id="cam-stream-label" class="stream-title">CAM_LIVING_01</span>
+                        <span id="cam-ai-badge" class="ai-badge">AI: OFF</span>
+                      </div>
+                      <div id="cam-no-signal" class="cam-no-signal">
+                        <div class="static-overlay"></div>
+                        <span>No Signal — Click Start</span>
+                      </div>
+                    </div>
+                    <div class="camera-controls">
+                      <button id="btn-camera-start" class="btn btn-primary btn-sm">▶ Start</button>
+                      <button id="btn-camera-ai" class="btn btn-secondary btn-sm" disabled>🧠 AI</button>
+                      <button id="btn-camera-stop" class="btn btn-secondary btn-sm" disabled>⏹ Stop</button>
+                    </div>
+                    <div id="ai-detections-list" class="detections-list">
+                      <span class="detections-empty">Start stream to enable AI detection</span>
+                    </div>
+                  </div>
+
+                  <div id="ctrl-speaker" class="conditional-controls hidden">
+                    <div class="form-group">
+                      <label for="prop-volume">Audio Volume: <span id="val-volume">50%</span></label>
+                      <input type="range" id="prop-volume" min="0" max="100" value="50" class="range-slider" />
+                    </div>
+                    <div class="form-group">
+                      <label for="prop-track">Playing Track</label>
+                      <select id="prop-track" class="select-input">
+                        <option value="Ambient Chillout Mix">Ambient Chillout Mix</option>
+                        <option value="Morning Jazz Acoustic">Morning Jazz Acoustic</option>
+                        <option value="Smart House Lo-Fi beats">Smart House Lo-Fi beats</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div id="ctrl-sensor" class="conditional-controls hidden">
+                    <div class="sensor-live-display">
+                      <div class="sensor-reading-card">
+                        <span class="sensor-emoji">🌡️</span>
+                        <div>
+                          <span id="live-temp-display" class="sensor-big-reading">--°C</span>
+                          <span class="sensor-sub">Temperature</span>
+                        </div>
+                      </div>
+                      <div class="sensor-reading-card">
+                        <span class="sensor-emoji">💧</span>
+                        <div>
+                          <span id="live-humidity-display" class="sensor-big-reading">--%</span>
+                          <span class="sensor-sub">Humidity</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="sparkline-container">
+                      <label>Temp History (20 readings)</label>
+                      <svg id="temp-sparkline" class="sparkline" viewBox="0 0 200 50" preserveAspectRatio="none">
+                        <path id="sparkline-path" d="" fill="none" stroke="#e95d3c" stroke-width="2" stroke-linejoin="round"/>
+                        <path id="sparkline-area" d="" fill="rgba(233,93,60,0.1)" stroke="none"/>
+                      </svg>
+                    </div>
+                  </div>
+
+                  <div id="ctrl-motion" class="conditional-controls hidden">
+                    <div id="motion-status-display" class="motion-status-card inactive">
+                      <div class="motion-pulse-ring"></div>
+                      <span class="motion-icon-big">👁️</span>
+                      <div>
+                        <span id="motion-status-text" class="motion-state">No Motion Detected</span>
+                        <span id="motion-last-time" class="motion-sub">Last: Never</span>
+                      </div>
+                    </div>
+                    <div class="motion-stats-row">
+                      <div class="motion-stat"><strong id="motion-event-count">0</strong><span>Events Today</span></div>
+                      <div class="motion-stat"><strong id="motion-sensitivity-val">Medium</strong><span>Sensitivity</span></div>
+                    </div>
+                    <div class="intrusion-log">
+                      <label>Event Log</label>
+                      <div id="motion-event-log" class="event-log-list">
+                        <div class="no-events">No events recorded</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div id="ctrl-lock" class="conditional-controls hidden">
+                    <div id="lock-status-display" class="lock-status-card locked">
+                      <span id="lock-icon-display" class="lock-big-icon">🔒</span>
+                      <div>
+                        <span id="lock-state-label" class="lock-state">LOCKED</span>
+                        <span id="lock-attempts-left" class="lock-sub">3 attempts left</span>
+                      </div>
+                    </div>
+                    <div class="pin-keypad">
+                      <div class="pin-display-row">
+                        <span id="pin-display-dots" class="pin-dots">_ _ _ _</span>
+                      </div>
+                      <div class="pin-grid">
+                        <button class="pin-btn" data-digit="1">1</button>
+                        <button class="pin-btn" data-digit="2">2</button>
+                        <button class="pin-btn" data-digit="3">3</button>
+                        <button class="pin-btn" data-digit="4">4</button>
+                        <button class="pin-btn" data-digit="5">5</button>
+                        <button class="pin-btn" data-digit="6">6</button>
+                        <button class="pin-btn" data-digit="7">7</button>
+                        <button class="pin-btn" data-digit="8">8</button>
+                        <button class="pin-btn" data-digit="9">9</button>
+                        <button class="pin-btn pin-clear" id="btn-pin-clear">⌫</button>
+                        <button class="pin-btn" data-digit="0">0</button>
+                        <button class="pin-btn pin-enter" id="btn-pin-enter">✓</button>
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label>Change PIN (default: 1234)</label>
+                      <div class="pin-change-row">
+                        <input type="password" id="new-pin-input" class="text-input" placeholder="New 4-digit PIN" maxlength="4" />
+                        <button id="btn-set-pin" class="btn btn-secondary btn-sm">Set PIN</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 3D Selected Shape Inspector -->
+              <div id="inspector-3d-section" class="hidden">
+                <div id="no-shape-selected" class="no-selection-placeholder">
+                  <p>Select a 3D solid component from the list or canvas to modify parameters</p>
+                </div>
+                <div id="shape-editor" class="editor-form hidden">
+                  <div class="editor-header">
+                    <span id="editor-shape-type" class="device-badge">Gear</span>
+                    <button id="btn-delete-shape" class="btn-delete" title="Delete Component">✕</button>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label for="prop-shape-name">Component Label</label>
+                    <input type="text" id="prop-shape-name" class="text-input" value="Primary Gear" />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="prop-shape-material">Material Specification</label>
+                    <select id="prop-shape-material" class="select-input">
+                      <option value="Steel">AISI 1045 Carbon Steel</option>
+                      <option value="Aluminum">6061-T6 Aluminum Alloy</option>
+                      <option value="PLA">PLA Filament Plastic</option>
+                      <option value="ABS">ABS FDM Plastic</option>
+                      <option value="Copper">Structural Copper C101</option>
+                    </select>
+                  </div>
+
+                  <!-- Shape-specific sliders -->
+                  <div id="sliders-cube" class="conditional-controls hidden">
+                    <div class="form-group">
+                      <label for="slide-cube-size">Box Size (mm): <span id="val-cube-size">50</span></label>
+                      <input type="range" id="slide-cube-size" min="10" max="150" value="50" class="range-slider" />
+                    </div>
+                  </div>
+
+                  <div id="sliders-cylinder" class="conditional-controls hidden">
+                    <div class="form-group">
+                      <label for="slide-cyl-radius">Radius (mm): <span id="val-cyl-radius">20</span></label>
+                      <input type="range" id="slide-cyl-radius" min="5" max="80" value="20" class="range-slider" />
+                    </div>
+                    <div class="form-group">
+                      <label for="slide-cyl-height">Height (mm): <span id="val-cyl-height">80</span></label>
+                      <input type="range" id="slide-cyl-height" min="10" max="250" value="80" class="range-slider" />
+                    </div>
+                  </div>
+
+                  <div id="sliders-gear" class="conditional-controls hidden">
+                    <div class="form-group">
+                      <label for="slide-gear-teeth">Teeth Count: <span id="val-gear-teeth">24</span></label>
+                      <input type="range" id="slide-gear-teeth" min="8" max="60" value="24" step="1" class="range-slider" />
+                    </div>
+                    <div class="form-group">
+                      <label for="slide-gear-thickness">Face Width (mm): <span id="val-gear-thickness">15</span></label>
+                      <input type="range" id="slide-gear-thickness" min="5" max="50" value="15" class="range-slider" />
+                    </div>
+                  </div>
+
+                  <div id="sliders-shaft" class="conditional-controls hidden">
+                    <div class="form-group">
+                      <label for="slide-shaft-diameter">Diameter (mm): <span id="val-shaft-diameter">12</span></label>
+                      <input type="range" id="slide-shaft-diameter" min="2" max="50" value="12" class="range-slider" />
+                    </div>
+                    <div class="form-group">
+                      <label for="slide-shaft-length">Length (mm): <span id="val-shaft-length">100</span></label>
+                      <input type="range" id="slide-shaft-length" min="10" max="300" value="100" class="range-slider" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- AI Design Copilot / Chat Sidebar Tab -->
+            <div class="section-container ai-copilot-container glass-card">
+              <h2 class="section-title">🤖 AI Design Copilot & Assistant</h2>
+              
+              <!-- Tab Navigation -->
+              <div class="copilot-tabs">
+                <button class="copilot-tab active" data-tab="chat">AI Assistant</button>
+                <button class="copilot-tab" data-tab="text-cad">Text-to-CAD</button>
+                <button class="copilot-tab" data-tab="img-cad">Sketch-to-CAD</button>
+              </div>
+
+              <!-- Content Pane: Chat Assistant -->
+              <div class="copilot-pane" id="pane-copilot-chat">
+                <div class="chat-messages-container" id="chat-messages">
+                  <div class="chat-msg ai-msg">
+                    <strong>CADNOVA.io Copilot:</strong> Welcome! I am your AI Design and Engineering assistant. How can I help you optimize your model or compute stress?
+                  </div>
+                </div>
+                <div class="chat-input-row">
+                  <input type="text" id="chat-input" placeholder="Ask about materials, cost, or calculations..." class="text-input" />
+                  <button id="btn-send-chat" class="btn btn-primary">Send</button>
+                </div>
+              </div>
+
+              <!-- Content Pane: Text to CAD -->
+              <div class="copilot-pane hidden" id="pane-copilot-text-cad">
+                <p class="pane-help">Instruct CADNOVA.io to build models dynamically. Type a natural prompt below:</p>
+                <textarea id="prompt-to-cad-input" class="text-area-input" placeholder='e.g., "Create a gear with 24 teeth" or "Create a cube of 50mm"'></textarea>
+                <button id="btn-generate-text-cad" class="btn btn-primary btn-block">Generate Model</button>
+                <div class="prompt-history">
+                  <label>Example commands:</label>
+                  <div class="example-command" onclick="document.getElementById('prompt-to-cad-input').value='Create a cube of 50mm'">"Create a cube of 50mm"</div>
+                  <div class="example-command" onclick="document.getElementById('prompt-to-cad-input').value='Create a gear with 24 teeth'">"Create a gear with 24 teeth"</div>
+                  <div class="example-command" onclick="document.getElementById('prompt-to-cad-input').value='Create a cylinder of radius 15mm and height 80mm'">"Create a cylinder of radius 15mm and height 80mm"</div>
+                </div>
+              </div>
+
+              <!-- Content Pane: Image/Sketch to CAD -->
+              <div class="copilot-pane hidden" id="pane-copilot-img-cad">
+                <p class="pane-help">Upload an engineering hand sketch or layout outline to generate an editable 3D solid.</p>
+                <div class="img-upload-zone" id="img-upload-zone">
+                  <span class="upload-icon">📷</span>
+                  <span>Drag & Drop Sketch or Click to Browse</span>
+                  <input type="file" id="img-sketch-upload" accept="image/*" class="hidden-input" />
+                </div>
+                <div class="sketch-previews hidden" id="sketch-previews-container">
+                  <label>Sketch Preview:</label>
+                  <img id="img-preview" src="#" alt="Sketch preview" class="sketch-preview-img" />
+                </div>
+                <button id="btn-generate-sketch-cad" class="btn btn-secondary btn-block" disabled>Process Sketch to 3D</button>
+                
+                <div class="preset-sketches">
+                  <label>Or select a sample sketch template:</label>
+                  <div class="preset-sketch-row">
+                    <button class="btn btn-secondary btn-sm preset-sketch-btn" data-preset="bracket">Bracket Sketch</button>
+                    <button class="btn btn-secondary btn-sm preset-sketch-btn" data-preset="flange">Flange Circle</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Smart Model Analysis Panel -->
+            <div class="section-container smart-analysis-panel">
+              <h2 class="section-title">📐 Smart Model Analysis & Quality</h2>
+              <div class="quality-score-row">
+                <span>Design Quality Score</span>
+                <span id="analysis-quality-score" class="score-badge">92%</span>
+              </div>
+              <div class="analysis-checks-list" id="analysis-findings-list">
+                <div class="check-item good">🟢 Constraints: Fully constrained (4 parameters)</div>
+                <div class="check-item warning">🟡 Fillets: Sharp corners detected on bottom edge</div>
+                <div class="check-item good">🟢 Walls: Minimum wall thickness 3.2mm (Safe)</div>
+              </div>
+            </div>
+
+            <!-- Collaboration & Shared State (Version History, Cursors) -->
+            <div class="section-container collaboration-panel">
+              <div class="collab-header">
+                <h2 class="section-title">👥 Team Space</h2>
+                <button id="btn-share-project" class="btn btn-secondary btn-sm">Share</button>
+              </div>
+              
+              <!-- Live users list -->
+              <div class="collaborators-list">
+                <label>Active Collaborators (Simulated)</label>
+                <div class="collaborator-tags" id="collab-avatars-row">
+                  <span class="collab-avatar user-self" title="Guest (You)">G</span>
+                  <span class="collab-avatar user-collab1 animate-pulse" title="Alex (Designer)">A</span>
+                  <span class="collab-avatar user-collab2" title="Sam (Manufacturer)">S</span>
+                </div>
+              </div>
+
+              <!-- Real-time comments thread -->
+              <div class="comments-thread-box">
+                <label>Real-Time Canvas Comments</label>
+                <div class="comments-list" id="project-comments-list">
+                  <div class="comment-item">
+                    <strong>Alex:</strong> "Thickness is perfect for 3D printing in PLA."
+                  </div>
+                </div>
+                <div class="comment-input-row">
+                  <input type="text" id="comment-input" placeholder="Type canvas comment..." class="text-input text-input-sm" />
+                  <button id="btn-add-comment" class="btn btn-secondary btn-sm">Post</button>
+                </div>
+              </div>
+
+              <!-- Version History -->
+              <div class="version-history-box">
+                <label>Version History</label>
+                <div class="version-history-list" id="project-versions-list">
+                  <!-- Generated via SQLite API in main.ts -->
+                </div>
+                <button id="btn-commit-version" class="btn btn-secondary btn-sm btn-block">💾 Commit Active Version</button>
+              </div>
+            </div>
+
+            <!-- Floor Plan Security and Analytics Hubs (Original features, positioned in workspace sidebar) -->
+            <!-- Security Dashboard (Original feature) -->
+            <div class="section-container security-panel">
+              <div class="security-header">
+                <h2 class="section-title">Security Hub</h2>
+                <label class="toggle-switch" title="Arm / Disarm system">
+                  <input type="checkbox" id="security-arm-toggle" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div id="security-status-bar" class="security-status disarmed">
+                <span id="security-status-icon">🔓</span>
+                <span id="security-status-label">System Disarmed</span>
+              </div>
+              <div class="security-metrics">
+                <div class="security-metric">
+                  <span class="sec-label">🚨 Alerts</span>
+                  <span id="sec-metric-alerts" class="sec-value danger">0</span>
+                </div>
+                <div class="security-metric">
+                  <span class="sec-label">📷 Cameras</span>
+                  <span id="sec-metric-cameras" class="sec-value">0</span>
+                </div>
+                <div class="security-metric">
+                  <span class="sec-label">🔐 Locks</span>
+                  <span id="sec-metric-locks" class="sec-value">0</span>
+                </div>
+                <div class="security-metric">
+                  <span class="sec-label">👁️ Sensors</span>
+                  <span id="sec-metric-sensors" class="sec-value">0</span>
+                </div>
+              </div>
+              <div class="intrusion-history">
+                <label>Recent Alerts</label>
+                <div id="global-alert-log" class="event-log-list compact">
+                  <div class="no-events">No alerts yet</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Original Analytics Dashboard (Original feature) -->
+            <div class="section-container analytics-panel">
+              <h2 class="section-title">Analytics Dashboard</h2>
+              <div class="analytics-metrics">
+                <div class="metric-card">
+                  <div class="card-left">
+                    <span class="card-label">Active Units</span>
+                    <span id="metric-active-count" class="card-value">0</span>
+                  </div>
+                  <div class="card-icon">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+                  </div>
+                </div>
+                
+                <div class="metric-card">
+                  <div class="card-left">
+                    <span class="card-label">Energy Load</span>
+                    <span id="metric-power-usage" class="card-value">0 W</span>
+                  </div>
+                  <div class="card-icon power-icon">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                  </div>
+                </div>
+
+                <div class="metric-card">
+                  <div class="card-left">
+                    <span class="card-label">IoT Coverage</span>
+                    <span id="metric-iot-strength" class="card-value">100%</span>
+                  </div>
+                  <div class="card-icon signal-icon">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><circle cx="12" cy="20" r="1"></circle></svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- IoT Activity Log Panel -->
+            <div id="iot-activity-panel" class="section-container iot-activity-panel hidden">
+              <div class="mfg-header">
+                <h2 class="section-title">IoT Activity Log</h2>
+                <button id="btn-clear-iot-log" class="btn-delete" title="Clear Log">✕</button>
+              </div>
+              <div id="iot-activity-log-list" class="event-log-list compact" style="max-height: 200px;">
+                <div class="no-events">No device activity recorded</div>
+              </div>
+            </div>
+
+            <!-- Automation & Scheduling Panel -->
+            <div id="iot-automation-panel" class="section-container iot-automation-panel hidden">
+              <h2 class="section-title">Automation & Scheduling</h2>
+              
+              <div class="form-group">
+                <label>Add New Schedule</label>
+                <div class="flex-row" style="gap: 8px;">
+                  <input type="time" id="schedule-time-input" class="text-input text-input-sm" style="flex: 1;" />
+                  <select id="schedule-action-input" class="select-input" style="flex: 1;">
+                    <option value="on">Turn ON</option>
+                    <option value="off">Turn OFF</option>
+                  </select>
+                </div>
+                <div class="flex-row" style="gap: 8px; margin-top: 8px;">
+                  <input type="range" id="schedule-bright-input" min="10" max="100" value="80" class="range-slider" style="flex: 2;" title="Brightness" />
+                  <button id="btn-add-schedule" class="btn btn-secondary btn-sm" style="flex: 1;">Add</button>
+                </div>
+              </div>
+
+              <label>Active Schedules</label>
+              <div id="schedules-list" class="schedules-list" style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+                <div class="no-events">No active schedules</div>
+              </div>
+            </div>
+
+          </aside>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- VIEW: COMMUNITY GALLERY -->
+      <!-- ============================================== -->
+      <section id="view-community" class="app-view gallery-container hidden">
+        <h2 class="section-title text-center">Trending Public Designs</h2>
+        <p class="section-subtitle text-center">Download mechanical parts or floor layouts shared by the community.</p>
+        
+        <div class="gallery-grid" id="community-gallery-grid">
+          <!-- Dynamically populated in main.ts -->
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- VIEW: LEARNING HUB -->
+      <!-- ============================================== -->
+      <section id="view-learning" class="app-view learning-container-page hidden">
+        <div class="learning-grid">
+          <!-- Tutorials & Short Guides -->
+          <div class="learn-column-left">
+            <div class="section-container glass-card">
+              <div class="learn-header">
+                <h2 class="section-title">Interactive Tutorials</h2>
+                <div class="flex-row">
+                  <label for="toggle-beginner-mode">Beginner Overlay Mode</label>
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="toggle-beginner-mode" />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+              </div>
+              <div class="tutorials-accordion">
+                <div class="tutorial-card">
+                  <h4>💡 Tutorial 1: Designing an Spur Gear in 3D</h4>
+                  <p>Learn how to select number of teeth, adjust modulus, and extrude pitch circle cylinders using text commands.</p>
+                  <button class="btn btn-secondary btn-sm btn-start-tutorial" data-tutorial="gear">Start Tutorial</button>
+                </div>
+                <div class="tutorial-card">
+                  <h4>💡 Tutorial 2: Creating a Smart Security Wall Layout</h4>
+                  <p>Learn how to toggle draw mode, draw rooms, and place IP cameras for optimal coverage.</p>
+                  <button class="btn btn-secondary btn-sm btn-start-tutorial" data-tutorial="smarthome">Start Tutorial</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Shortcuts Guide -->
+            <div class="section-container glass-card">
+              <h2 class="section-title">CADNOVA.io Shortcuts Cheat Sheet</h2>
+              <table class="shortcuts-table">
+                <thead>
+                  <tr>
+                    <th>Keyboard Shortcut</th>
+                    <th>CAD Platform Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>Ctrl + S</code></td>
+                    <td>Auto-save active model coordinates to SQLite</td>
+                  </tr>
+                  <tr>
+                    <td><code>Tab</code></td>
+                    <td>Toggle between 2D Layout and 3D Viewport</td>
+                  </tr>
+                  <tr>
+                    <td><code>D</code></td>
+                    <td>Activate Draw Wall Mode in 2D Layout</td>
+                  </tr>
+                  <tr>
+                    <td><code>V</code></td>
+                    <td>Toggle Voice Speech recognition recording</td>
+                  </tr>
+                  <tr>
+                    <td><code>Delete</code></td>
+                    <td>Remove selected device or 3D component</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Quiz & Certification Exam -->
+          <div class="learn-column-right">
+            <!-- Certification Card -->
+            <div class="section-container glass-card">
+              <h2 class="section-title">CADNOVA.io Associate Certification Exam</h2>
+              <p class="pane-help">Answer the following quiz questions correctly to download your dynamic CADNOVA.io certification certificate!</p>
+              
+              <div class="quiz-box" id="certification-quiz-box">
+                <div class="quiz-question">
+                  <p><strong>Question 1:</strong> Which material provides the highest strength-to-weight ratio for aerospace parts?</p>
+                  <div class="quiz-options">
+                    <label><input type="radio" name="q1" value="PLA" /> PLA Plastic</label>
+                    <label><input type="radio" name="q1" value="Steel" /> Carbon Steel</label>
+                    <label><input type="radio" name="q1" value="Aluminum" /> 6061-T6 Aluminum</label>
+                  </div>
+                </div>
+
+                <div class="quiz-question">
+                  <p><strong>Question 2:</strong> What is the main purpose of filleting sharp interior corners?</p>
+                  <div class="quiz-options">
+                    <label><input type="radio" name="q2" value="cost" /> Reduce PLA filament cost</label>
+                    <label><input type="radio" name="q2" value="stress" /> Reduce stress concentration factors</label>
+                    <label><input type="radio" name="q2" value="weight" /> Make parts lighter</label>
+                  </div>
+                </div>
+
+                <button id="btn-submit-quiz" class="btn btn-primary btn-block">Submit Answers</button>
+              </div>
+
+              <!-- Certificate Download Drawer -->
+              <div id="certificate-drawer" class="certificate-drawer hidden">
+                <h3>🎉 Certification Granted!</h3>
+                <p>You scored 100% on the CADNOVA.io certification exam.</p>
+                <canvas id="canvas-certificate" width="400" height="280"></canvas>
+                <button id="btn-download-cert" class="btn btn-primary btn-block">Download Certificate PDF</button>
+              </div>
+            </div>
+
+            <!-- CAD Challenges -->
+            <div class="section-container glass-card">
+              <h2 class="section-title">Design Challenges</h2>
+              <div class="challenges-list">
+                <div class="challenge-item">
+                  <span class="challenge-badge">Active</span>
+                  <strong>Design a 24-teeth pinion</strong> that mates with a 48-teeth gear. High load rating.
+                </div>
+                <div class="challenge-item">
+                  <span class="challenge-badge">Active</span>
+                  <strong>Smart Home Blueprint:</strong> Layout 3 cameras in a triangle to ensure 100% security coverage.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- VIEW: MANUFACTURING BOM -->
+      <!-- ============================================== -->
+      <section id="view-manufacturing" class="app-view manufacturing-container-page hidden">
+        <div class="mfg-grid">
+          <!-- Left Column - BOM Table -->
+          <div class="mfg-column-left">
+            <div class="section-container glass-card">
+              <div class="mfg-header">
+                <h2 class="section-title">Bill of Materials (BOM)</h2>
+                <div class="export-row">
+                  <button id="btn-export-bom-pdf" class="btn btn-secondary btn-sm">Export PDF Report</button>
+                  <button id="btn-export-mesh-stl" class="btn btn-primary btn-sm">Export STL Model</button>
+                </div>
+              </div>
+              <div class="mfg-table-container">
+                <table class="mfg-table" id="bom-table">
+                  <thead>
+                    <tr>
+                      <th>Component</th>
+                      <th>Quantity</th>
+                      <th>Material</th>
+                      <th>Weight (g)</th>
+                      <th>Carbon footprint (kg CO2)</th>
+                      <th>Estimated Cost ($)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="bom-table-body">
+                    <!-- Populated dynamically via main.ts -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column - Manufacturing Report & Carbon footprint -->
+          <div class="mfg-column-right">
+            <!-- Readiness Assessment -->
+            <div class="section-container glass-card">
+              <h2 class="section-title">Manufacturing Readiness Assessment</h2>
+              <div class="mfg-readiness-row">
+                <span class="mfg-readiness-score" id="mfg-readiness-score">95</span>
+                <div>
+                  <h4>Score: Optimal</h4>
+                  <p>Model is printable and CNC-milling ready with standard wall constraints.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Material Property Comparison -->
+            <div class="section-container glass-card">
+              <h2 class="section-title">Material Property Comparison</h2>
+              <div class="property-comparison-rows">
+                <div class="comparison-bar-row">
+                  <span class="comp-label">Tensile Strength (MPa)</span>
+                  <div class="comp-bar-container">
+                    <div class="comp-bar steel" style="width: 90%" title="Steel: 550 MPa">Steel (550)</div>
+                    <div class="comp-bar aluminum" style="width: 50%" title="Aluminum: 310 MPa">Alum (310)</div>
+                    <div class="comp-bar pla" style="width: 15%" title="PLA: 50 MPa">PLA (50)</div>
+                  </div>
+                </div>
+                <div class="comparison-bar-row">
+                  <span class="comp-label">Density (g/cm³)</span>
+                  <div class="comp-bar-container">
+                    <div class="comp-bar steel" style="width: 100%" title="Steel: 7.85">Steel (7.8)</div>
+                    <div class="comp-bar aluminum" style="width: 35%" title="Aluminum: 2.7">Alum (2.7)</div>
+                    <div class="comp-bar pla" style="width: 15%" title="PLA: 1.25">PLA (1.2)</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- VIEW: ADMIN PANEL -->
+      <!-- ============================================== -->
+      <section id="view-admin" class="app-view admin-container-page hidden">
+        <div class="admin-grid">
+          <!-- User Roles List -->
+          <div class="admin-column-left">
+            <div class="section-container glass-card">
+              <h2 class="section-title">Database User Authorization</h2>
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>Username</th>
+                    <th>Role Level</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-users-table-body">
+                  <!-- Populated via GET /api/admin/users in main.ts -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- System Settings and Telemetry -->
+          <div class="admin-column-right">
+            <div class="section-container glass-card">
+              <h2 class="section-title">Cloud Engine Telemetry</h2>
+              <div class="telemetry-grid">
+                <div class="telemetry-card">
+                  <strong>Total Users Registered</strong>
+                  <span id="telemetry-users-count">3</span>
+                </div>
+                <div class="telemetry-card">
+                  <strong>SQLite Active Connections</strong>
+                  <span>1 (database.sqlite)</span>
+                </div>
+                <div class="telemetry-card">
+                  <strong>Engine Latency</strong>
+                  <span>12 ms (Optimal)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Settings Toggles -->
+            <div class="section-container glass-card">
+              <h2 class="section-title">Cloud Configurations</h2>
+              <div class="form-group flex-row">
+                <label>Strict Wall Analysis Verification</label>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="admin-strict-analysis" checked />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="form-group flex-row">
+                <label>Enable Real-time Collaboration WebSockets</label>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="admin-collab-sockets" checked />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="form-group flex-row">
+                <label>Simulate Offline AI Gateway Backends</label>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="admin-simulate-offline-ai" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Floating Action Button (FAB) for AI Prompts Quick Access -->
+    <div id="fab-ai-assistant" class="fab-container">
+      <button class="btn-fab animate-bounce" title="Launch AI Chatbot Assistant">🤖</button>
+    </div>
+
+    <!-- History Log Modal (action timeline) -->
+    <div id="history-log-modal" class="hidden">
+      <div class="history-log-panel">
+        <div class="history-log-header">
+          <h3>⏳ Action History Log</h3>
+          <button id="btn-close-history-log" class="btn-close">&times;</button>
+        </div>
+        <div class="history-log-body" id="history-log-body">
+          <div class="history-log-empty">No actions recorded yet. Make changes to the canvas to see history.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Custom Premium Confirmation Modal (Original feature) -->
+    <div id="custom-confirm-modal" class="modal-overlay hidden">
+      <div class="modal-card glass-modal">
+        <div class="modal-header">
+          <h3>Confirm Action</h3>
+          <button id="btn-close-modal" class="btn-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p id="confirm-modal-message">Are you sure you want to perform this action?</p>
+        </div>
+        <div class="modal-footer">
+          <button id="btn-confirm-cancel" class="btn btn-secondary">Cancel</button>
+          <button id="btn-confirm-ok" class="btn btn-danger">Confirm</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Simulation Results Modal (Phase 2 addition) -->
+    <div id="simulation-modal" class="modal-overlay hidden">
+      <div class="modal-card glass-modal" style="max-width: 600px; width: 90%;">
+        <div class="modal-header">
+          <h3>🌀 Engineering Simulation Diagnostics</h3>
+          <button id="btn-close-sim-modal" class="btn-close">&times;</button>
+        </div>
+        <div class="modal-body" style="display: flex; flex-direction: column; gap: 15px; padding: 20px 0;">
+          <div id="sim-type-selector" class="engine-mode-group" style="margin-bottom: 10px; display: flex; gap: 5px;">
+            <button id="btn-sim-stress" class="btn-mode active" style="flex: 1; padding: 6px 12px; font-size: 12px;">3D Stress</button>
+            <button id="btn-sim-thermal" class="btn-mode" style="flex: 1; padding: 6px 12px; font-size: 12px;">3D Thermal</button>
+            <button id="btn-sim-signals" class="btn-mode" style="flex: 1; padding: 6px 12px; font-size: 12px;">2D RF Signals</button>
+          </div>
+          
+          <div id="sim-results-pane" class="glass-card" style="padding: 15px; border-radius: 8px; font-size: 13px; line-height: 1.5; min-height: 100px;">
+            Select a simulation type above to run calculation heuristics.
+          </div>
+          
+          <div class="sim-graph-container" style="background: rgba(0,0,0,0.2); border-radius: 8px; height: 180px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+            <canvas id="canvas-sim-graph" width="500" height="180" style="width: 100%; height: 100%; display: block;"></canvas>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="btn-close-sim-ok" class="btn btn-secondary">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Gateway Not Configured Dialog Overlay -->
+    <div id="ai-gateway-modal" class="modal-overlay hidden">
+      <div class="modal-card glass-modal" style="max-width: 420px; padding: 24px; text-align: center; border: 1px solid rgba(239, 68, 68, 0.2);">
+        <div style="font-size: 40px; margin-bottom: 12px;">🧠</div>
+        <h3 style="color: #ef4444; margin-bottom: 10px; font-size: 18px; font-weight: 600;">AI Gateway Not Configured</h3>
+        <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 20px;">
+          To activate real-time CAD generative assistant features, please add your credentials key (e.g. Gemini API Key) inside the settings dashboard or environment configuration.
+        </p>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+          <button id="btn-close-ai-gateway" class="btn btn-secondary" style="font-size: 12px; padding: 8px 16px;">Dismiss</button>
+          <button id="btn-configure-ai-gateway" class="btn btn-primary" style="font-size: 12px; padding: 8px 16px;">Configure Key</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Entry module scripts -->
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
