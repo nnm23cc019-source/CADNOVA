@@ -21,7 +21,7 @@ import {
   getVersions,
   getVersionById,
   saveVersion
-} from './database';
+} from './database.js';
 
 dotenv.config();
 
@@ -53,6 +53,11 @@ app.use(cors({
 }));
 
 app.use(express.json());
+
+// Serve static assets from frontendDistPath BEFORE wildcard routes when running locally
+if (!process.env.VERCEL) {
+  app.use(express.static(frontendDistPath));
+}
 
 // ── HEALTH CHECK ENDPOINT ─────────────────────────────────────────────────
 app.get(['/api/health', '/health'], (req, res) => {
@@ -406,7 +411,7 @@ app.post(['/api/ai/chat', '/ai/chat'], async (req, res) => {
   }
 });
 
-// Fallback JSON 404 for unknown API endpoints
+// Fallback JSON 404 for unknown API endpoints, or sendFile for SPA routing
 app.use('*', (req, res) => {
   if (req.originalUrl.startsWith('/api') || req.url.startsWith('/api') || process.env.VERCEL) {
     res.status(404).json({ error: 'Endpoint not found' });
@@ -422,7 +427,6 @@ export default app;
 if (!process.env.VERCEL) {
   async function startServer() {
     try {
-      app.use(express.static(frontendDistPath));
       const server = app.listen(PORT, () => {
         console.log(`Backend server running on http://localhost:${PORT}`);
       });

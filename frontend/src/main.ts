@@ -6001,7 +6001,12 @@ function updateEsp32Badge(connected: boolean, reconnecting = false) {
 
 // WebSocket Setup
 function initWebSocket() {
-  const wsUrl = `ws://${window.location.hostname}:3000`;
+  const isHttps = window.location.protocol === 'https:';
+  const wsProtocol = isHttps ? 'wss://' : 'ws://';
+  const host = window.location.hostname;
+  const wsUrl = (host === 'localhost' || host === '127.0.0.1')
+    ? `${wsProtocol}${host}:3000`
+    : `${wsProtocol}${host}`;
   let ws: WebSocket;
   try {
     ws = new WebSocket(wsUrl);
