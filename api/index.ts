@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import app from '../backend/dist/index.js';
+import app from '../backend/src/index.js';
 
 export const config = {
   runtime: 'nodejs'
