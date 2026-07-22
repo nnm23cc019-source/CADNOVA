@@ -3,7 +3,6 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { WebSocketServer, WebSocket } from 'ws';
 import { 
   initDatabase, 
   getDesigns, 
@@ -33,6 +32,11 @@ const frontendDistPath = path.resolve(__dirname, '../../frontend/dist');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Initialize DB on cold start (safely handled inside database.ts)
+initDatabase().catch((err: any) => {
+  console.warn('Database initialization warning:', err.message);
+});
+
 // Enable CORS with support for development and production domains
 app.use(cors({
   origin: [
@@ -50,17 +54,25 @@ app.use(cors({
 
 app.use(express.json());
 
-// Health Check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date() });
+// ── HEALTH CHECK ENDPOINT ─────────────────────────────────────────────────
+app.get(['/api/health', '/health'], (req, res) => {
+  try {
+    res.status(200).json({ 
+      status: 'ok', 
+      timestamp: new Date().toISOString(), 
+      environment: process.env.VERCEL ? 'vercel-serverless' : 'local' 
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Internal server error' });
+  }
 });
 
-// --- AUTH API ROUTES ---
-app.post('/api/auth/register', async (req, res) => {
+// ── AUTH API ROUTES ────────────────────────────────────────────────────────
+app.post(['/api/auth/register', '/auth/register'], async (req, res) => {
   try {
-    const { username, password, role } = req.body;
-    if (!username || !password) {
-      res.status(400).json({ error: 'Missing username or password' });
+    const { username, password, role } = req.body || {};
+    if (!username || typeof username !== 'string' || !password || typeof password !== 'string') {
+      res.status(400).json({ error: 'Missing or invalid username or password' });
       return;
     }
     const existing = await getUserByUsername(username);
@@ -70,31 +82,37 @@ app.post('/api/auth/register', async (req, res) => {
     }
     const id = 'user-' + Math.random().toString(36).substr(2, 9);
     await createUser(id, username, password, role || 'student');
-    res.json({ success: true, user: { id, username, role: role || 'student' } });
+    res.status(200).json({ success: true, user: { id, username, role: role || 'student' } });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('Register error:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
-app.post('/api/auth/login', async (req, res) => {
+app.post(['/api/auth/login', '/auth/login'], async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { username, password } = req.body || {};
+    if (!username || !password) {
+      res.status(400).json({ error: 'Missing username or password' });
+      return;
+    }
     const user = await getUserByUsername(username);
     if (!user || user.password !== password) {
       res.status(401).json({ error: 'Invalid username or password' });
       return;
     }
-    res.json({ 
+    res.status(200).json({ 
       success: true, 
       token: `mock-jwt-token-for-${username}`, 
       user: { id: user.id, username: user.username, role: user.role } 
     });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('Login error:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
-app.get('/api/auth/me', async (req, res) => {
+app.get(['/api/auth/me', '/auth/me'], async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer mock-jwt-token-for-')) {
@@ -107,45 +125,59 @@ app.get('/api/auth/me', async (req, res) => {
       res.status(401).json({ error: 'User not found' });
       return;
     }
-    res.json({ id: user.id, username: user.username, role: user.role });
+    res.status(200).json({ id: user.id, username: user.username, role: user.role });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('Auth check error:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
-// --- DESIGNS API ROUTES ---
+// ── DESIGNS API ROUTES ─────────────────────────────────────────────────────
 
 // GET all designs metadata
-app.get('/api/designs', async (req, res) => {
+app.get(['/api/designs', '/designs'], async (req, res) => {
   try {
     const designs = await getDesigns();
-    res.json(designs);
+    res.status(200).json(designs || []);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('Get designs error:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
 // GET design by ID
-app.get('/api/designs/:id', async (req, res) => {
+app.get(['/api/designs/:id', '/designs/:id'], async (req, res) => {
   try {
-    const design = await getDesignById(req.params.id);
+    const { id } = req.params;
+    if (!id) {
+      res.status(400).json({ error: 'Missing design ID' });
+      return;
+    }
+    const design = await getDesignById(id);
     if (!design) {
       res.status(404).json({ error: 'Design not found' });
       return;
     }
-    res.json({
+    let parsedGeometry = {};
+    try {
+      parsedGeometry = typeof design.geometry === 'string' ? JSON.parse(design.geometry) : design.geometry;
+    } catch {
+      parsedGeometry = design.geometry;
+    }
+    res.status(200).json({
       ...design,
-      geometry: JSON.parse(design.geometry)
+      geometry: parsedGeometry
     });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('Get design by ID error:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
 // POST to save (insert or update) a design
-app.post('/api/designs', async (req, res) => {
+app.post(['/api/designs', '/designs'], async (req, res) => {
   try {
-    const { id, name, description, geometry } = req.body;
+    const { id, name, description, geometry } = req.body || {};
     if (!id || !name || geometry === undefined) {
       res.status(400).json({ error: 'Missing required fields: id, name, geometry' });
       return;
@@ -155,152 +187,202 @@ app.post('/api/designs', async (req, res) => {
     await saveDesign(id, name, description || '', geometryString);
     res.status(200).json({ message: 'Design saved successfully', id });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('Save design error:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
 // DELETE a design
-app.delete('/api/designs/:id', async (req, res) => {
+app.delete(['/api/designs/:id', '/designs/:id'], async (req, res) => {
   try {
-    await deleteDesign(req.params.id);
-    res.json({ message: 'Design deleted successfully' });
+    const { id } = req.params;
+    if (!id) {
+      res.status(400).json({ error: 'Missing design ID' });
+      return;
+    }
+    await deleteDesign(id);
+    res.status(200).json({ message: 'Design deleted successfully' });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('Delete design error:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
-// --- COMMENTS API ---
-app.get('/api/designs/:id/comments', async (req, res) => {
+// ── COMMENTS API ───────────────────────────────────────────────────────────
+app.get(['/api/designs/:id/comments', '/designs/:id/comments'], async (req, res) => {
   try {
-    const comments = await getComments(req.params.id);
-    res.json(comments);
+    const { id } = req.params;
+    if (!id) {
+      res.status(400).json({ error: 'Missing design ID' });
+      return;
+    }
+    const comments = await getComments(id);
+    res.status(200).json(comments || []);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('Get comments error:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
-app.post('/api/designs/:id/comments', async (req, res) => {
+app.post(['/api/designs/:id/comments', '/designs/:id/comments'], async (req, res) => {
   try {
-    const { username, content } = req.body;
-    if (!username || !content) {
-      res.status(400).json({ error: 'Missing username or content' });
+    const { id: designId } = req.params;
+    const { username, content } = req.body || {};
+    if (!designId || !username || !content) {
+      res.status(400).json({ error: 'Missing designId, username, or content' });
       return;
     }
     const id = 'comment-' + Math.random().toString(36).substr(2, 9);
-    await addComment(id, req.params.id, username, content);
-    res.json({ success: true, comment: { id, design_id: req.params.id, username, content, created_at: new Date() } });
+    await addComment(id, designId, username, content);
+    res.status(200).json({ success: true, comment: { id, design_id: designId, username, content, created_at: new Date() } });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('Add comment error:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
-// --- LIKES API ---
-app.get('/api/designs/:id/likes', async (req, res) => {
+// ── LIKES API ──────────────────────────────────────────────────────────────
+app.get(['/api/designs/:id/likes', '/designs/:id/likes'], async (req, res) => {
   try {
-    const count = await getLikesCount(req.params.id);
-    const username = req.query.username as string;
-    const hasLiked = username ? await hasUserLiked(req.params.id, username) : false;
-    res.json({ count, hasLiked });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.post('/api/designs/:id/like', async (req, res) => {
-  try {
-    const { username } = req.body;
-    if (!username) {
-      res.status(400).json({ error: 'Missing username' });
+    const { id } = req.params;
+    if (!id) {
+      res.status(400).json({ error: 'Missing design ID' });
       return;
     }
-    const status = await toggleLike(req.params.id, username);
-    const count = await getLikesCount(req.params.id);
-    res.json({ ...status, count });
+    const count = await getLikesCount(id);
+    const username = req.query.username as string;
+    const hasLiked = username ? await hasUserLiked(id, username) : false;
+    res.status(200).json({ count, hasLiked });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('Get likes error:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
-// --- VERSIONS API ---
-app.get('/api/designs/:id/versions', async (req, res) => {
+app.post(['/api/designs/:id/like', '/designs/:id/like'], async (req, res) => {
   try {
-    const versions = await getVersions(req.params.id);
-    res.json(versions);
+    const { id } = req.params;
+    const { username } = req.body || {};
+    if (!id || !username) {
+      res.status(400).json({ error: 'Missing design ID or username' });
+      return;
+    }
+    const status = await toggleLike(id, username);
+    const count = await getLikesCount(id);
+    res.status(200).json({ ...status, count });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('Toggle like error:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
-app.post('/api/designs/:id/versions', async (req, res) => {
+// ── VERSIONS API ───────────────────────────────────────────────────────────
+app.get(['/api/designs/:id/versions', '/designs/:id/versions'], async (req, res) => {
   try {
-    const { name, geometry } = req.body;
-    if (!name || !geometry) {
+    const { id } = req.params;
+    if (!id) {
+      res.status(400).json({ error: 'Missing design ID' });
+      return;
+    }
+    const versions = await getVersions(id);
+    res.status(200).json(versions || []);
+  } catch (error: any) {
+    console.error('Get versions error:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+});
+
+app.post(['/api/designs/:id/versions', '/designs/:id/versions'], async (req, res) => {
+  try {
+    const { id: designId } = req.params;
+    const { name, geometry } = req.body || {};
+    if (!designId || !name || !geometry) {
       res.status(400).json({ error: 'Missing version name or geometry' });
       return;
     }
     const id = 'ver-' + Math.random().toString(36).substr(2, 9);
     const geometryString = typeof geometry === 'string' ? geometry : JSON.stringify(geometry);
-    await saveVersion(id, req.params.id, name, geometryString);
-    res.json({ success: true, version: { id, name, created_at: new Date() } });
+    await saveVersion(id, designId, name, geometryString);
+    res.status(200).json({ success: true, version: { id, name, created_at: new Date() } });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('Save version error:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
-app.post('/api/designs/:id/versions/:versionId/restore', async (req, res) => {
+app.post(['/api/designs/:id/versions/:versionId/restore', '/designs/:id/versions/:versionId/restore'], async (req, res) => {
   try {
-    const version = await getVersionById(req.params.versionId);
+    const { id, versionId } = req.params;
+    if (!id || !versionId) {
+      res.status(400).json({ error: 'Missing design ID or version ID' });
+      return;
+    }
+    const version = await getVersionById(versionId);
     if (!version) {
       res.status(404).json({ error: 'Version not found' });
       return;
     }
-    const design = await getDesignById(req.params.id);
+    const design = await getDesignById(id);
     if (!design) {
       res.status(404).json({ error: 'Design not found' });
       return;
     }
     await saveDesign(design.id, design.name, design.description, version.geometry);
-    res.json({ 
+    let parsedGeom = {};
+    try {
+      parsedGeom = JSON.parse(version.geometry);
+    } catch {
+      parsedGeom = version.geometry;
+    }
+    res.status(200).json({ 
       success: true, 
       message: 'Version restored successfully', 
-      geometry: JSON.parse(version.geometry) 
+      geometry: parsedGeom 
     });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('Restore version error:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
-// --- ADMIN API ---
-app.get('/api/admin/users', async (req, res) => {
+// ── ADMIN API ──────────────────────────────────────────────────────────────
+app.get(['/api/admin/users', '/admin/users'], async (req, res) => {
   try {
     const users = await getUsers();
-    res.json(users);
+    res.status(200).json(users || []);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('Admin get users error:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
-app.post('/api/admin/users/:username/role', async (req, res) => {
+app.post(['/api/admin/users/:username/role', '/admin/users/:username/role'], async (req, res) => {
   try {
-    const { role } = req.body;
-    await updateUserRole(req.params.username, role);
-    res.json({ success: true });
+    const { username } = req.params;
+    const { role } = req.body || {};
+    if (!username || !role) {
+      res.status(400).json({ error: 'Missing username or role' });
+      return;
+    }
+    await updateUserRole(username, role);
+    res.status(200).json({ success: true });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('Admin update role error:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
-// --- AI COPILOT API ---
-app.post('/api/ai/chat', async (req, res) => {
+// ── AI COPILOT API ─────────────────────────────────────────────────────────
+app.post(['/api/ai/chat', '/ai/chat'], async (req, res) => {
   try {
-    const { prompt, context } = req.body;
+    const { prompt, context } = req.body || {};
     if (!prompt) {
       res.status(400).json({ error: 'Missing prompt' });
       return;
     }
 
     let reply = 'I have received your prompt. Can you clarify which mechanical parts or materials you want to analyze?';
-    const lower = prompt.toLowerCase();
+    const lower = String(prompt).toLowerCase();
     
     if (lower.includes('material') || lower.includes('plastic') || lower.includes('metal')) {
       reply = '🤖 Material Selection Advice:\n- Aluminum: High tensile strength, extremely lightweight, great for structural shafts.\n- PLA Plastic: Ideal for rapid FDM 3D printing test brackets.\n- Steel: Highest load limits, heavy weight.';
@@ -317,254 +399,37 @@ app.post('/api/ai/chat', async (req, res) => {
       reply = '🤖 AI: I see you want a gear. Try using the "Text to CAD" tab for specific generation!';
     }
 
-    res.json({ reply });
+    res.status(200).json({ reply });
   } catch (error: any) {
     console.error('AI Error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
-// --- SERVING STATIC ASSETS (FRONTEND) ---
-
-// Serve the compiled build static assets of the frontend
-app.use(express.static(frontendDistPath));
-
-// Support Single Page Application (SPA) routing: fall back all unknown routes to frontend index.html
-app.get('*', (req, res) => {
-  res.sendFile(path.resolve(frontendDistPath, 'index.html'));
+// Fallback JSON 404 for unknown API endpoints
+app.use('*', (req, res) => {
+  if (req.originalUrl.startsWith('/api') || req.url.startsWith('/api') || process.env.VERCEL) {
+    res.status(404).json({ error: 'Endpoint not found' });
+  } else {
+    res.sendFile(path.resolve(frontendDistPath, 'index.html'));
+  }
 });
 
-// Initialize database and start the Express server
-async function startServer() {
-  try {
-    await initDatabase();
-    const server = app.listen(PORT, () => {
-      console.log(`Backend server running on http://localhost:${PORT}`);
-      console.log(`Serving static files from ${frontendDistPath}`);
-      console.log(`Website URL configured for cadnova.io`);
-    });
+// Export Express app for Vercel Serverless Functions
+export default app;
 
-    // ── WebSocket Server ───────────────────────────────────────────────────────
-    const wss = new WebSocketServer({ server });
-
-    // Separate sets: web browsers vs ESP32 hardware
-    const webClients = new Set<WebSocket>();  // all browser WS connections
-    let esp32Ws: WebSocket | null = null;     // the one ESP32 connection
-
-    // Shared device state (single source of truth)
-    let lastLedState = false;
-    let lastBrightness = 75;
-    let lastColor = { r: 255, g: 180, b: 40 };
-    let lastRssi: number | null = null;
-
-    // Heartbeat: backend pings ESP32 every 5 s (as requested in Requirement 8)
-    const PING_INTERVAL_MS = 5000;
-    const PONG_TIMEOUT_MS = 4000;
-    const MAX_MISSED_PINGS = 3;
-
-    let esp32PingTimer: NodeJS.Timeout | null = null;
-    let esp32PongTimer: NodeJS.Timeout | null = null;
-    let missedPingCount = 0;
-
-    // ── Broadcast helpers ─────────────────────────────────────────────────────
-    function broadcastToWeb(msg: any) {
-      const str = JSON.stringify(msg);
-      webClients.forEach(ws => {
-        if (ws.readyState === WebSocket.OPEN) ws.send(str);
+// ── LOCAL SERVER INITIALIZATION (NON-VERCEL ONLY) ──────────────────────────
+if (!process.env.VERCEL) {
+  async function startServer() {
+    try {
+      app.use(express.static(frontendDistPath));
+      const server = app.listen(PORT, () => {
+        console.log(`Backend server running on http://localhost:${PORT}`);
       });
+    } catch (error) {
+      console.error('Failed to start local server:', error);
     }
-
-    function broadcastStatus(connected: boolean, reconnecting = false) {
-      const msg = { type: 'esp32_status', connected, reconnecting, rssi: lastRssi };
-      broadcastToWeb(msg);
-      console.log(`[STATUS] Broadcast → connected=${connected} reconnecting=${reconnecting}`);
-    }
-
-    // ── Heartbeat management ──────────────────────────────────────────────────
-    function stopHeartbeat() {
-      if (esp32PingTimer) { clearInterval(esp32PingTimer); esp32PingTimer = null; }
-      if (esp32PongTimer) { clearTimeout(esp32PongTimer);  esp32PongTimer = null; }
-      missedPingCount = 0;
-    }
-
-    function startHeartbeat() {
-      stopHeartbeat();
-      esp32PingTimer = setInterval(() => {
-        if (!esp32Ws || esp32Ws.readyState !== WebSocket.OPEN) return;
-
-        esp32Ws.send(JSON.stringify({ type: 'ping' }));
-        console.log(`[HB] Ping sent (miss count so far: ${missedPingCount})`);
-
-        esp32PongTimer = setTimeout(() => {
-          missedPingCount++;
-          console.log(`[HB] Pong timeout #${missedPingCount}/${MAX_MISSED_PINGS}`);
-
-          if (missedPingCount >= MAX_MISSED_PINGS) {
-            console.log('[HB] Max missed pings reached — terminating ESP32 connection');
-            if (esp32Ws) { esp32Ws.terminate(); esp32Ws = null; }
-            stopHeartbeat();
-            broadcastStatus(false, false);
-          } else {
-            // Intermediate misses: show reconnecting
-            broadcastStatus(false, true);
-          }
-        }, PONG_TIMEOUT_MS);
-      }, PING_INTERVAL_MS);
-    }
-
-    // ── Connection handler ────────────────────────────────────────────────────
-    wss.on('connection', (ws: WebSocket, req: any) => {
-      const ip = req.socket.remoteAddress;
-      console.log(`[WS] New connection from ${ip}`);
-
-      ws.on('message', (raw: any) => {
-        let data: any;
-        try { data = JSON.parse(raw.toString()); }
-        catch (e: any) { console.log('[ERR] JSON parse error: ' + e.message); return; }
-
-        // ── ESP32 identifies itself ───────────────────────────────────────
-        if (data.client === 'esp32') {
-          console.log(`[ESP32] Connected from ${ip}`);
-          esp32Ws = ws;
-          missedPingCount = 0;
-
-          if (data.state      !== undefined) lastLedState   = !!data.state;
-          if (data.brightness !== undefined) lastBrightness = data.brightness;
-          if (data.color      !== undefined) lastColor      = data.color;
-          if (data.rssi       !== undefined) lastRssi       = data.rssi;
-
-          console.log(`[ESP32] Initial state → LED=${lastLedState} brightness=${lastBrightness} color=RGB(${lastColor.r},${lastColor.g},${lastColor.b}) rssi=${lastRssi}`);
-
-          // Restore last state from backend on reconnect/connect (Requirement 7)
-          esp32Ws.send(JSON.stringify({ 
-            device: 'esp32', 
-            power: lastLedState, 
-            brightness: lastBrightness, 
-            color: lastColor 
-          }));
-
-          broadcastStatus(true);
-          broadcastToWeb({ type: 'led_status', state: lastLedState, brightness: lastBrightness, rssi: lastRssi });
-          startHeartbeat();
-          return;
-        }
-
-        // ── Web browser identifies itself ────────────────────────────────
-        if (data.client === 'web') {
-          webClients.add(ws);
-          console.log(`[WEB] Browser registered (total: ${webClients.size})`);
-          // Send current state immediately
-          ws.send(JSON.stringify({ type: 'esp32_status', connected: !!esp32Ws, rssi: lastRssi }));
-          if (esp32Ws) {
-            ws.send(JSON.stringify({ type: 'led_status', state: lastLedState, brightness: lastBrightness, rssi: lastRssi }));
-          }
-          return;
-        }
-
-        // ── Pong from ESP32 ──────────────────────────────────────────────
-        if (data.type === 'pong') {
-          if (esp32PongTimer) { clearTimeout(esp32PongTimer); esp32PongTimer = null; }
-          missedPingCount = 0;
-          if (data.rssi !== undefined) lastRssi = data.rssi;
-          console.log(`[HB] Pong received → rssi=${data.rssi} uptime=${data.uptime}s`);
-          // Respond so ESP32 knows server is alive
-          if (esp32Ws && esp32Ws.readyState === WebSocket.OPEN) {
-            esp32Ws.send(JSON.stringify({ type: 'heartbeat_ack' }));
-          }
-          return;
-        }
-
-        // ── ESP32-initiated heartbeat ────────────────────────────────────
-        if (data.type === 'heartbeat') {
-          if (data.rssi !== undefined) lastRssi = data.rssi;
-          console.log(`[HB] Heartbeat from ESP32 → rssi=${data.rssi} uptime=${data.uptime}s`);
-          // ACK back
-          if (ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type: 'heartbeat_ack' }));
-          }
-          return;
-        }
-
-        // ── Device messages to forward to ESP32 ───────────────────────────────────
-        if (data.device === 'esp32') {
-          console.log(`[FORWARD] Sending to ESP32: power=${data.power} brightness=${data.brightness || 'unchanged'}`);
-          if (data.power !== undefined) lastLedState = !!data.power;
-          if (data.brightness !== undefined) lastBrightness = data.brightness;
-          if (data.color !== undefined) lastColor = data.color;
-          
-          if (esp32Ws && esp32Ws.readyState === WebSocket.OPEN) {
-            esp32Ws.send(JSON.stringify(data));
-          } else {
-            console.log('[CMD] Forward dropped — ESP32 not connected');
-            ws.send(JSON.stringify({ type: 'esp32_status', connected: false }));
-          }
-          return;
-        }
-
-        // ── Commands from web → ESP32 ────────────────────────────────────
-        if (data.type === 'set_led') {
-          console.log("Request received");
-          lastLedState = !!data.state; // Store state
-          if (esp32Ws && esp32Ws.readyState === WebSocket.OPEN) {
-            console.log("Sending command to ESP32");
-            esp32Ws.send(JSON.stringify({ type: 'set_led', state: data.state }));
-          } else {
-            console.log('[CMD] set_led DROPPED — ESP32 not connected');
-            ws.send(JSON.stringify({ type: 'esp32_status', connected: false }));
-          }
-          return;
-        }
-
-        if (data.type === 'set_brightness') {
-          console.log(`[CMD] set_brightness → ${data.brightness}% (from web)`);
-          lastBrightness = data.brightness;
-          if (esp32Ws && esp32Ws.readyState === WebSocket.OPEN) {
-            esp32Ws.send(JSON.stringify({ type: 'set_brightness', brightness: data.brightness }));
-          } else {
-            ws.send(JSON.stringify({ type: 'esp32_status', connected: false }));
-          }
-          return;
-        }
-
-        // ── led_status ACK from ESP32 ────────────────────────────────────
-        if (data.type === 'led_status') {
-          lastLedState = !!data.state;
-          if (data.brightness !== undefined) lastBrightness = data.brightness;
-          if (data.rssi       !== undefined) lastRssi       = data.rssi;
-          console.log("ESP32 acknowledged command");
-          broadcastToWeb({ type: 'led_status', state: lastLedState, brightness: lastBrightness, rssi: lastRssi });
-          return;
-        }
-      });
-
-      ws.on('close', (code: number, reason: any) => {
-        const reasonStr = reason ? reason.toString() : '(none)';
-
-        if (ws === esp32Ws) {
-          console.log(`[ESP32] DISCONNECTED — code=${code} reason=${reasonStr}`);
-          esp32Ws = null;
-          stopHeartbeat();
-          broadcastStatus(false, false);
-        } else if (webClients.has(ws)) {
-          webClients.delete(ws);
-          console.log(`[WEB] Browser disconnected (remaining: ${webClients.size})`);
-        } else {
-          console.log(`[WS] Unknown client disconnected — code=${code}`);
-        }
-      });
-
-      ws.on('error', (err: any) => {
-        console.log(`[ERR] WebSocket error: ${err.message}`);
-      });
-    });
-
-    console.log('[WS] WebSocket Server initialized on port ' + PORT);
-
-  } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
   }
+
+  startServer();
 }
-
-startServer();
-
