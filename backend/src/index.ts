@@ -21,7 +21,7 @@ import {
   getVersions,
   getVersionById,
   saveVersion
-} from './database.js';
+} from './database';
 
 dotenv.config();
 
